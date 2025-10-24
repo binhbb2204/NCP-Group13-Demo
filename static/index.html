@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Chat System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login/Register Section -->
+    <div id="auth-container">
+        <div class="auth-box">
+            <h1>💬 Private Chat</h1>
+            
+            <!-- Login Form -->
+            <div id="login-form" class="form-container">
+                <h2>Login</h2>
+                <input type="text" id="login-username" placeholder="Username" autocomplete="username">
+                <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+                <button onclick="login()">Login</button>
+                <p class="switch-form">Don't have an account? <a href="#" onclick="showRegister()">Register</a></p>
+                <div id="login-error" class="error-message"></div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="form-container" style="display: none;">
+                <h2>Register</h2>
+                <input type="text" id="register-username" placeholder="Username" autocomplete="username">
+                <input type="password" id="register-password" placeholder="Password" autocomplete="new-password">
+                <input type="password" id="register-confirm-password" placeholder="Confirm Password" autocomplete="new-password">
+                <button onclick="register()">Register</button>
+                <p class="switch-form">Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
+                <div id="register-error" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Section -->
+    <div id="chat-container" style="display: none;">
+        <!-- Sidebar -->
+        <div class="chat-sidebar">
+            <div class="sidebar-header">
+                <h3>💬 My Chats</h3>
+                <div class="header-actions">
+                    <button onclick="toggleTheme()" class="theme-toggle-btn" title="Toggle Theme">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                    <button onclick="showAddFriend()" class="add-friend-btn" title="Add Friend">➕</button>
+                </div>
+            </div>
+
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                    </svg>
+                </div>
+                <div class="user-details">
+                    <span id="current-username" class="username"></span>
+                    <button onclick="logout()" class="logout-btn">Logout</button>
+                </div>
+            </div>
+
+            <!-- Friend Requests Badge -->
+            <div id="requests-badge" class="requests-section" style="display: none;" onclick="showFriendRequests()">
+                <span>📬 You have <span id="request-count">0</span> friend request(s) - Click to view!</span>
+            </div>
+
+            <!-- Friends List -->
+            <div class="friends-list" id="friends-list">
+                <div class="empty-state">No friends yet. Add someone to start chatting!</div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-main">
+            <div id="no-chat-selected" class="no-chat">
+                <div class="no-chat-content">
+                    <h2>👋 Welcome to Private Chat!</h2>
+                    <p>Select a friend to start messaging</p>
+                    <button onclick="showAddFriend()" class="btn-primary">Add Friend</button>
+                </div>
+            </div>
+
+            <div id="chat-area" style="display: none;">
+                <div class="chat-header">
+                    <div class="chat-header-info">
+                        <div class="friend-avatar">
+                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                            </svg>
+                        </div>
+                        <h3 id="chat-friend-name"></h3>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="messages">
+                    <!-- Messages will be loaded here -->
+                </div>
+
+                <div class="chat-input">
+                    <input type="text" id="message-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Friend Modal -->
+    <div id="add-friend-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Friend</h2>
+                <span class="close" onclick="closeAddFriend()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="search-username" placeholder="Search username..." oninput="searchUsers()">
+                <div id="search-results"></div>
+                <div id="add-friend-message" class="modal-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Friend Requests Modal -->
+    <div id="requests-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Friend Requests</h2>
+                <span class="close" onclick="closeRequests()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="requests-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
