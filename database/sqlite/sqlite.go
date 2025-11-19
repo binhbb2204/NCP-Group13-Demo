@@ -2,8 +2,13 @@ package sqlite
 
 import (
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"os"
 
 	"DB-Presentation/models"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // GetMessagesSQLite fetches messages between two users from SQLite.
@@ -69,4 +74,46 @@ func CountUnreadSQLite(db *sql.DB, recipientID int) (int, error) {
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM messages WHERE recipient_id = ? AND is_read = 0", recipientID).Scan(&count)
 	return count, err
+}
+
+// SeedData inserts the default admin user from mock_user.json if it doesn't exist.
+func SeedData(db *sql.DB) error {
+	// Read the mock user JSON file
+	data, err := os.ReadFile("mock_user.json")
+	if err != nil {
+		return fmt.Errorf("failed to read mock_user.json: %w", err)
+	}
+
+	var mockUser models.User
+	if err := json.Unmarshal(data, &mockUser); err != nil {
+		return fmt.Errorf("failed to parse mock_user.json: %w", err)
+	}
+
+	// Check if user already exists
+	var exists int
+	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", mockUser.Username).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check if user exists: %w", err)
+	}
+
+	if exists > 0 {
+		fmt.Printf("ℹ️  User '%s' already exists, skipping seed\n", mockUser.Username)
+		return nil
+	}
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(mockUser.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Insert the user
+	_, err = db.Exec("INSERT INTO users (username, password, created_at) VALUES (?, ?, ?)",
+		mockUser.Username, string(hashedPassword), mockUser.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("failed to insert user: %w", err)
+	}
+
+	fmt.Printf("✅ Seeded user '%s' successfully\n", mockUser.Username)
+	return nil
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"DB-Presentation/database/sqlite"
 	"DB-Presentation/db"
 	"DB-Presentation/handlers"
 	mongopkg "DB-Presentation/mongo"
@@ -35,6 +36,11 @@ func main() {
 	if db.NeedsMigration(d) {
 		fmt.Println("⚠️  Database needs migration! Run: go run migrate.go")
 		fmt.Println("   Continuing anyway...")
+	}
+
+	// Seed initial data (admin user)
+	if err := sqlite.SeedData(d); err != nil {
+		log.Printf("⚠️  Warning: Could not seed data: %v\n", err)
 	}
 
 	// load .env if present (simple parser)
