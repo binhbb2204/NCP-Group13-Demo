@@ -328,14 +328,39 @@ function displayMessage(message) {
         messageDiv.classList.add('sent');
     }
 
-    // Extract time directly from database timestamp string (format: "2025-10-15 16:16:25")
-    // This avoids timezone conversion issues
+    // Parse created_at robustly and format to local HH:MM.
+    // Handle different formats sent by the server (ISO RFC3339 or SQL "YYYY-MM-DD HH:MM:SS").
     let time = '';
     if (message.created_at) {
-        const timeStr = message.created_at.toString();
-        const timeMatch = timeStr.match(/(\d{2}):(\d{2}):/);
-        if (timeMatch) {
-            time = `${timeMatch[1]}:${timeMatch[2]}`;
+        let dt = new Date(message.created_at);
+
+        // If parsing failed (Invalid Date), try converting common SQL format to ISO-like string
+        if (isNaN(dt.getTime())) {
+            try {
+                // Convert "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DDTHH:MM:SS" and try again
+                const s = message.created_at.toString();
+                const sIso = s.replace(' ', 'T');
+                dt = new Date(sIso);
+
+                // As a last resort, try treating it as UTC by appending 'Z'
+                if (isNaN(dt.getTime())) {
+                    dt = new Date(sIso + 'Z');
+                }
+            } catch (e) {
+                dt = new Date(NaN);
+            }
+        }
+
+        if (!isNaN(dt.getTime())) {
+            // Format as HH:MM according to user's locale
+            time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+            // Fallback: regex extraction for whatever string we received
+            const timeStr = message.created_at.toString();
+            const timeMatch = timeStr.match(/(\d{2}):(\d{2}):/);
+            if (timeMatch) {
+                time = `${timeMatch[1]}:${timeMatch[2]}`;
+            }
         }
     }
 
