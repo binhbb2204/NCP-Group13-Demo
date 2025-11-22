@@ -39,10 +39,14 @@ func RegisterRoutes(router *mux.Router, db *sql.DB, mc *mongodriver.Client) {
 	router.HandleFunc("/api/friends/requests", getFriendRequestsHandler).Methods("GET")
 	router.HandleFunc("/api/friends/accept/{id}", acceptFriendRequestHandler).Methods("POST")
 	router.HandleFunc("/api/friends/reject/{id}", rejectFriendRequestHandler).Methods("POST")
+	router.HandleFunc("/api/friends/remove/{id}", removeFriendHandler).Methods("DELETE")
 
 	router.HandleFunc("/api/messages/{friendId}", getMessagesHandler).Methods("GET")
 	router.HandleFunc("/api/messages", sendMessageHandler).Methods("POST")
 	router.HandleFunc("/api/messages/unread", getUnreadCountHandler).Methods("GET")
+
+	// Account settings
+	router.HandleFunc("/api/user/update", updateUserHandler).Methods("POST")
 }
 
 // registerHandler registers a new user
@@ -249,6 +253,36 @@ func rejectFriendRequestHandler(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSON(w, models.Response{Success: true, Message: "Friend request rejected"}, http.StatusOK)
 }
 
+// removeFriendHandler deletes an accepted friendship between the authenticated user and friend id
+// Expects: DELETE /api/friends/remove/{id}?user_id=123
+func removeFriendHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	friendID := vars["id"]
+	userID := r.URL.Query().Get("user_id")
+
+	if userID == "" {
+		utils.SendJSON(w, models.Response{Success: false, Message: "user_id required"}, http.StatusBadRequest)
+		return
+	}
+
+	// Delete the friendship row in either direction
+	res, err := dbase.Exec(`DELETE FROM friendships WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)`, toInt(userID), toInt(friendID), toInt(friendID), toInt(userID))
+	if err != nil {
+		utils.SendJSON(w, models.Response{Success: false, Message: "Error removing friend"}, http.StatusInternalServerError)
+		return
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		utils.SendJSON(w, models.Response{Success: false, Message: "Friendship not found"}, http.StatusNotFound)
+		return
+	}
+
+	// Notify other user to refresh its friend list
+	ws.NotifyUser(toInt(friendID), models.WSMessage{Type: "friend_removed", Data: map[string]interface{}{"user_id": toInt(userID)}})
+
+	utils.SendJSON(w, models.Response{Success: true, Message: "Unfriended successfully"}, http.StatusOK)
+}
+
 // getFriendsHandler returns accepted friends with unread counts
 func getFriendsHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user_id")
@@ -398,6 +432,92 @@ func toInt(s string) int {
 		return 0
 	}
 	return i
+}
+
+// updateUserHandler updates a user's username and/or password.
+// Expected JSON body:
+//
+//	{
+//	  "user_id": 1,
+//	  "new_username": "optional string",
+//	  "current_password": "required if new_password provided",
+//	  "new_password": "optional string"
+//	}
+func updateUserHandler(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		UserID          int    `json:"user_id"`
+		NewUsername     string `json:"new_username"`
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.SendJSON(w, models.Response{Success: false, Message: "Invalid request"}, http.StatusBadRequest)
+		return
+	}
+
+	if req.UserID == 0 {
+		utils.SendJSON(w, models.Response{Success: false, Message: "user_id is required"}, http.StatusBadRequest)
+		return
+	}
+
+	if req.NewUsername == "" && req.NewPassword == "" {
+		utils.SendJSON(w, models.Response{Success: false, Message: "No changes provided"}, http.StatusBadRequest)
+		return
+	}
+
+	// Fetch existing user for validation
+	var currentUsername, currentHashed string
+	err := dbase.QueryRow("SELECT username, password FROM users WHERE id = ?", req.UserID).Scan(&currentUsername, &currentHashed)
+	if err != nil {
+		utils.SendJSON(w, models.Response{Success: false, Message: "User not found"}, http.StatusNotFound)
+		return
+	}
+
+	// Handle password change
+	if req.NewPassword != "" {
+		if len(req.NewPassword) < 4 {
+			utils.SendJSON(w, models.Response{Success: false, Message: "Password must be at least 4 characters"}, http.StatusBadRequest)
+			return
+		}
+		// Require current password for security
+		if req.CurrentPassword == "" {
+			utils.SendJSON(w, models.Response{Success: false, Message: "current_password required"}, http.StatusBadRequest)
+			return
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(currentHashed), []byte(req.CurrentPassword)); err != nil {
+			utils.SendJSON(w, models.Response{Success: false, Message: "Current password incorrect"}, http.StatusUnauthorized)
+			return
+		}
+		newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			utils.SendJSON(w, models.Response{Success: false, Message: "Error processing new password"}, http.StatusInternalServerError)
+			return
+		}
+		if _, err := dbase.Exec("UPDATE users SET password = ? WHERE id = ?", string(newHash), req.UserID); err != nil {
+			utils.SendJSON(w, models.Response{Success: false, Message: "Error updating password"}, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Handle username change
+	finalUsername := currentUsername
+	if req.NewUsername != "" && req.NewUsername != currentUsername {
+		// Ensure not taken
+		var exists int
+		_ = dbase.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", req.NewUsername).Scan(&exists)
+		if exists > 0 {
+			utils.SendJSON(w, models.Response{Success: false, Message: "Username already taken"}, http.StatusConflict)
+			return
+		}
+		if _, err := dbase.Exec("UPDATE users SET username = ? WHERE id = ?", req.NewUsername, req.UserID); err != nil {
+			utils.SendJSON(w, models.Response{Success: false, Message: "Error updating username"}, http.StatusInternalServerError)
+			return
+		}
+		finalUsername = req.NewUsername
+	}
+
+	utils.SendJSON(w, models.Response{Success: true, Message: "Account updated", Data: map[string]interface{}{"user_id": req.UserID, "username": finalUsername}}, http.StatusOK)
 }
 
 //

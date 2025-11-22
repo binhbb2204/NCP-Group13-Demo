@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Private Chat System</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <!-- Login/Register Section -->
     <div id="auth-container">
         <div class="auth-box">
             <h1>💬 Private Chat</h1>
-            
+
             <!-- Login Form -->
             <div id="login-form" class="form-container">
                 <h2>Login</h2>
@@ -27,7 +29,8 @@
                 <h2>Register</h2>
                 <input type="text" id="register-username" placeholder="Username" autocomplete="username">
                 <input type="password" id="register-password" placeholder="Password" autocomplete="new-password">
-                <input type="password" id="register-confirm-password" placeholder="Confirm Password" autocomplete="new-password">
+                <input type="password" id="register-confirm-password" placeholder="Confirm Password"
+                    autocomplete="new-password">
                 <button onclick="register()">Register</button>
                 <p class="switch-form">Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
                 <div id="register-error" class="error-message"></div>
@@ -42,17 +45,22 @@
             <div class="sidebar-header">
                 <h3>💬 My Chats</h3>
                 <div class="header-actions">
-                    <button onclick="toggleTheme()" class="theme-toggle-btn" title="Toggle Theme">
+                    <button onclick="showSettings()" class="settings-btn" title="Account Settings"
+                        aria-label="Settings">⚙️</button>
+                    <button onclick="toggleTheme()" class="theme-toggle-btn" title="Toggle Theme"
+                        aria-label="Toggle Theme">
                         <span class="theme-icon">🌙</span>
                     </button>
-                    <button onclick="showAddFriend()" class="add-friend-btn" title="Add Friend">➕</button>
+                    <button onclick="showAddFriend()" class="add-friend-btn" title="Add Friend"
+                        aria-label="Add Friend">➕</button>
                 </div>
             </div>
 
             <div class="user-profile">
                 <div class="user-avatar">
                     <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                        <path fill="currentColor"
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
                     </svg>
                 </div>
                 <div class="user-details">
@@ -87,10 +95,15 @@
                     <div class="chat-header-info">
                         <div class="friend-avatar">
                             <svg viewBox="0 0 24 24" width="20" height="20">
-                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                                <path fill="currentColor"
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
                             </svg>
                         </div>
                         <h3 id="chat-friend-name"></h3>
+                        <div class="chat-header-actions">
+                            <button id="unfriend-btn" class="unfriend-btn" onclick="unfriendCurrent()"
+                                style="display:none" title="Remove this friend">Unfriend</button>
+                        </div>
                     </div>
                 </div>
 
@@ -99,7 +112,8 @@
                 </div>
 
                 <div class="chat-input">
-                    <input type="text" id="message-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+                    <input type="text" id="message-input" placeholder="Type a message..."
+                        onkeypress="handleKeyPress(event)">
                     <button onclick="sendMessage()">Send</button>
                 </div>
             </div>
@@ -134,6 +148,33 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Account Settings</h2>
+                <span class="close" onclick="closeSettings()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <label for="settings-username">Username</label>
+                    <input type="text" id="settings-username" placeholder="New username">
+                </div>
+                <div class="settings-section">
+                    <label for="settings-current-password">Current Password</label>
+                    <input type="password" id="settings-current-password" placeholder="Current password">
+                </div>
+                <div class="settings-section">
+                    <label for="settings-new-password">New Password</label>
+                    <input type="password" id="settings-new-password" placeholder="New password (min 4 chars)">
+                </div>
+                <button onclick="updateSettings()" class="btn-primary" style="margin-top:10px">Save Changes</button>
+                <div id="settings-message" class="modal-message"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
+
 </html>

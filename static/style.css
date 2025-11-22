@@ -196,7 +196,8 @@ body {
 }
 
 .theme-toggle-btn,
-.add-friend-btn {
+.add-friend-btn,
+.settings-btn {
     background: var(--bg-tertiary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
@@ -209,12 +210,23 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0; /* eliminate default button padding differences */
+    line-height: 1; /* normalize emoji vertical centering */
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .theme-toggle-btn:hover,
-.add-friend-btn:hover {
+.add-friend-btn:hover,
+.settings-btn:hover {
     background: var(--bg-hover);
     border-color: var(--accent-color);
+}
+
+/* Ensure settings button has visible border */
+.settings-btn {
+    border: 1px solid var(--border-color) !important; /* ensure border persists */
+    background: var(--bg-tertiary) !important; /* override potential UA white bg from color emoji */
 }
 
 .theme-icon {
@@ -393,7 +405,6 @@ body {
     justify-content: center;
     background: var(--bg-primary);
     transition: background 0.2s ease;
-    height: 100vh; /* Full viewport height */
     overflow: hidden; /* Prevent overflow */
 }
 
@@ -451,6 +462,22 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+}
+.chat-header-actions {
+    margin-left: auto;
+}
+.unfriend-btn {
+    background: var(--danger-color);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background .15s ease-in-out;
+}
+.unfriend-btn:hover {
+    background: #c82333;
 }
 
 .chat-header h3 {

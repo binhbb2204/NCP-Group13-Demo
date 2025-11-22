@@ -18,7 +18,7 @@ function initTheme() {
 function toggleTheme() {
     const body = document.body;
     const isLight = body.classList.contains('light-mode');
-    
+
     if (isLight) {
         body.classList.remove('light-mode');
         localStorage.setItem('chatTheme', 'dark');
@@ -38,7 +38,7 @@ function updateThemeIcon(theme) {
 }
 
 // Check if user is already logged in
-window.onload = function() {
+window.onload = function () {
     initTheme();
     const savedUser = localStorage.getItem('chatUser');
     if (savedUser) {
@@ -95,7 +95,7 @@ async function register() {
     try {
         const response = await fetch('/api/register', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
         });
 
@@ -135,7 +135,7 @@ async function login() {
     try {
         const response = await fetch('/api/login', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
         });
 
@@ -170,6 +170,14 @@ function logout() {
     document.getElementById('auth-container').style.display = 'flex';
     document.getElementById('messages').innerHTML = '';
     document.getElementById('message-input').value = '';
+    // Clear friends list & state completely so next login starts fresh
+    friends = [];
+    const fl = document.getElementById('friends-list');
+    if (fl) fl.innerHTML = '<div class="empty-state">Logged out. Please login.</div>';
+    const noChat = document.getElementById('no-chat-selected');
+    if (noChat) noChat.style.display = 'block';
+    const chatArea = document.getElementById('chat-area');
+    if (chatArea) chatArea.style.display = 'none';
 }
 
 // Show chat interface
@@ -185,12 +193,13 @@ async function loadFriends() {
         console.log('Loading friends for user:', currentUser.user_id);
         const response = await fetch(`/api/friends?user_id=${currentUser.user_id}`);
         const data = await response.json();
-        
+
         console.log('Friends API response:', data);
 
         if (data.success && data.data) {
             friends = data.data;
             console.log('Friends loaded:', friends.length, 'friends');
+            console.log('Friend objects:', JSON.stringify(friends, null, 2));
             displayFriends();
         }
     } catch (error) {
@@ -201,7 +210,7 @@ async function loadFriends() {
 // Display friends in sidebar
 function displayFriends() {
     const friendsList = document.getElementById('friends-list');
-    
+
     if (friends.length === 0) {
         friendsList.innerHTML = `
             <div class="empty-state">
@@ -222,7 +231,7 @@ function displayFriends() {
         if (currentFriend && currentFriend.id === friend.id) {
             friendItem.classList.add('active');
         }
-        
+
         friendItem.innerHTML = `
             <div class="friend-avatar">
                 <svg viewBox="0 0 24 24" width="28" height="28">
@@ -234,7 +243,7 @@ function displayFriends() {
             </div>
             ${friend.unread_count > 0 ? `<span class="unread-badge">${friend.unread_count}</span>` : ''}
         `;
-        
+
         friendItem.onclick = () => selectFriend(friend);
         friendsList.appendChild(friendItem);
     });
@@ -244,11 +253,13 @@ function displayFriends() {
 function selectFriend(friend) {
     currentFriend = friend;
     displayFriends();
-    
+
     document.getElementById('no-chat-selected').style.display = 'none';
     document.getElementById('chat-area').style.display = 'flex';
     document.getElementById('chat-friend-name').textContent = friend.username;
-    
+    const unfriendBtn = document.getElementById('unfriend-btn');
+    if (unfriendBtn) unfriendBtn.style.display = 'inline-block';
+
     loadMessages();
 }
 
@@ -267,7 +278,7 @@ async function loadMessages() {
                 displayMessage(message);
             });
             scrollToBottom();
-            
+
             // Refresh friends list to update unread count
             loadFriends();
         }
@@ -288,7 +299,7 @@ async function sendMessage() {
     try {
         const response = await fetch('/api/messages', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 sender_id: currentUser.user_id,
                 recipient_id: currentFriend.id,
@@ -323,7 +334,7 @@ function displayMessage(message) {
     const messagesDiv = document.getElementById('messages');
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message';
-    
+
     if (currentUser && message.sender_id === currentUser.user_id) {
         messageDiv.classList.add('sent');
     }
@@ -407,7 +418,7 @@ async function searchUsers() {
 
             if (data.success && data.data) {
                 resultsDiv.innerHTML = '';
-                
+
                 if (data.data.length === 0) {
                     resultsDiv.innerHTML = '<p style="text-align:center; color: #999;">No users found</p>';
                 } else {
@@ -431,11 +442,11 @@ async function searchUsers() {
 // Send friend request
 async function sendFriendRequest(username, button) {
     const messageDiv = document.getElementById('add-friend-message');
-    
+
     try {
         const response = await fetch('/api/friends/request', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 user_id: currentUser.user_id,
                 username: username,
@@ -486,7 +497,7 @@ async function loadFriendRequests() {
 // Show friend requests modal
 async function showFriendRequests() {
     document.getElementById('requests-modal').style.display = 'block';
-    
+
     try {
         const response = await fetch(`/api/friends/requests?user_id=${currentUser.user_id}`);
         const data = await response.json();
@@ -537,7 +548,7 @@ async function acceptRequest(requestId) {
             document.getElementById(`request-${requestId}`).remove();
             loadFriendRequests();
             loadFriends();
-            
+
             const requestsList = document.getElementById('requests-list');
             if (requestsList.children.length === 0) {
                 requestsList.innerHTML = '<p style="text-align:center; color: #999; padding: 20px;">No pending requests</p>';
@@ -562,7 +573,7 @@ async function rejectRequest(requestId) {
         if (data.success) {
             document.getElementById(`request-${requestId}`).remove();
             loadFriendRequests();
-            
+
             const requestsList = document.getElementById('requests-list');
             if (requestsList.children.length === 0) {
                 requestsList.innerHTML = '<p style="text-align:center; color: #999; padding: 20px;">No pending requests</p>';
@@ -582,42 +593,78 @@ function connectWebSocket() {
 
     ws = new WebSocket(wsUrl);
 
-    ws.onopen = function() {
+    ws.onopen = function () {
         console.log('WebSocket connected');
     };
 
-    ws.onmessage = function(event) {
+    ws.onmessage = function (event) {
         const wsMessage = JSON.parse(event.data);
-        
+
         if (wsMessage.type === 'message') {
             const message = wsMessage.data;
-            
+
             // If message is from current chat friend, display it
             if (currentFriend && message.sender_id === currentFriend.id) {
                 displayMessage(message);
                 scrollToBottom();
             }
-            
+
             // Refresh friends list to update unread count
             loadFriends();
         } else if (wsMessage.type === 'friend_request') {
             loadFriendRequests();
         } else if (wsMessage.type === 'friend_accepted') {
             loadFriends();
+        } else if (wsMessage.type === 'friend_removed') {
+            // If the removed friend is currently open, clear chat
+            if (currentFriend && currentFriend.id === wsMessage.data.user_id) {
+                currentFriend = null;
+                document.getElementById('chat-area').style.display = 'none';
+                document.getElementById('no-chat-selected').style.display = 'block';
+                const unfriendBtn = document.getElementById('unfriend-btn');
+                if (unfriendBtn) unfriendBtn.style.display = 'none';
+            }
+            loadFriends();
         }
     };
 
-    ws.onerror = function(error) {
+    ws.onerror = function (error) {
         console.error('WebSocket error:', error);
     };
 
-    ws.onclose = function() {
+    ws.onclose = function () {
         console.log('WebSocket disconnected');
         // Attempt to reconnect after 3 seconds
         if (currentUser) {
             setTimeout(connectWebSocket, 3000);
         }
     };
+}
+
+// Unfriend current friend
+async function unfriendCurrent() {
+    if (!currentFriend || !currentUser) return;
+    console.log('Unfriend - currentFriend object:', currentFriend);
+    console.log('Unfriend - currentFriend.id:', currentFriend.id, 'type:', typeof currentFriend.id);
+    if (!confirm(`Unfriend ${currentFriend.username}?`)) return;
+    try {
+        const response = await fetch(`/api/friends/remove/${currentFriend.id}?user_id=${currentUser.user_id}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+            alert('Unfriended successfully');
+            currentFriend = null;
+            loadFriends();
+            document.getElementById('chat-area').style.display = 'none';
+            document.getElementById('no-chat-selected').style.display = 'block';
+            const unfriendBtn = document.getElementById('unfriend-btn');
+            if (unfriendBtn) unfriendBtn.style.display = 'none';
+        } else {
+            alert('Error: ' + (data.message || 'Could not unfriend'));
+        }
+    } catch (e) {
+        console.error('Unfriend error', e);
+        alert('Network error. Please try again.');
+    }
 }
 
 // Scroll to bottom
@@ -639,14 +686,99 @@ function escapeHtml(text) {
 }
 
 // Close modals when clicking outside
-window.onclick = function(event) {
+window.onclick = function (event) {
     const addFriendModal = document.getElementById('add-friend-modal');
     const requestsModal = document.getElementById('requests-modal');
-    
+    const settingsModal = document.getElementById('settings-modal');
+
     if (event.target === addFriendModal) {
         addFriendModal.style.display = 'none';
     }
     if (event.target === requestsModal) {
         requestsModal.style.display = 'none';
     }
+    if (event.target === settingsModal) {
+        settingsModal.style.display = 'none';
+    }
 };
+
+// SETTINGS FEATURE
+function showSettings() {
+    if (!currentUser) return;
+    document.getElementById('settings-modal').style.display = 'block';
+    document.getElementById('settings-username').value = currentUser.username;
+    document.getElementById('settings-current-password').value = '';
+    document.getElementById('settings-new-password').value = '';
+    const msg = document.getElementById('settings-message');
+    msg.textContent = '';
+    msg.className = 'modal-message';
+}
+
+function closeSettings() {
+    document.getElementById('settings-modal').style.display = 'none';
+}
+
+async function updateSettings() {
+    if (!currentUser) return;
+    const newUsername = document.getElementById('settings-username').value.trim();
+    const currentPassword = document.getElementById('settings-current-password').value;
+    const newPassword = document.getElementById('settings-new-password').value;
+    const msg = document.getElementById('settings-message');
+    msg.textContent = '';
+    msg.className = 'modal-message';
+
+    if (newUsername === currentUser.username && newPassword === '') {
+        msg.classList.add('error');
+        msg.textContent = 'No changes to save';
+        return;
+    }
+
+    const payload = {
+        user_id: currentUser.user_id,
+    };
+    if (newUsername && newUsername !== currentUser.username) {
+        payload.new_username = newUsername;
+    }
+    if (newPassword) {
+        if (newPassword.length < 4) {
+            msg.classList.add('error');
+            msg.textContent = 'New password too short';
+            return;
+        }
+        payload.new_password = newPassword;
+        payload.current_password = currentPassword; // must provide
+        if (!currentPassword) {
+            msg.classList.add('error');
+            msg.textContent = 'Current password required to change password';
+            return;
+        }
+    }
+
+    try {
+        const response = await fetch('/api/user/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.success) {
+            msg.classList.add('success');
+            msg.textContent = 'Settings updated successfully';
+            // Update local state/localStorage
+            if (data.data && data.data.username) {
+                currentUser.username = data.data.username;
+                localStorage.setItem('chatUser', JSON.stringify(currentUser));
+                const usernameSpan = document.getElementById('current-username');
+                if (usernameSpan) usernameSpan.textContent = currentUser.username;
+            }
+            setTimeout(() => { closeSettings(); }, 1000);
+        } else {
+            msg.classList.add('error');
+            msg.textContent = data.message || 'Update failed';
+        }
+    } catch (e) {
+        console.error('Settings update error:', e);
+        msg.classList.add('error');
+        msg.textContent = 'Network error. Please try again.';
+    }
+}
